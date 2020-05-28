@@ -1,0 +1,341 @@
+---
+title: "ChiaHan_Chiang_Midterm1"
+output: html_document
+###Chia-Han Chiang, IE6600 18025 Computation and Visualization SEC 03 Fall 2019 ###
+---
+
+# Set up
+```{r}
+library(date)
+library(plyr)
+library(dplyr)
+library(ggplot2)
+library(lubridate)
+library(RColorBrewer)
+farmer <- read.csv("/Users/CCH/Desktop/---/19Fall_Visualization/Midterm/farmers_market_info.csv",na.strings="", sep=",", stringsAsFactors = FALSE)
+ind <- which(is.na(farmer$Season1Date)&is.na(farmer$Season1Time))
+farmer <- farmer[-ind,]
+```
+
+# Unified the date
+```{r}
+MA <- subset(farmer,farmer$State == "Massachusetts")
+ind <- which(is.na(MA$Season1Date))
+MA <- MA[-ind,]
+MA$S <- 0
+MA$E <- 0
+MA$Year <- "Unknown"
+temp <-  strsplit(MA$Season1Date," ")
+l <- which(lengths(temp)<3)
+temp <- temp[-c(l)]
+MA <- MA[-l,]
+ind <- which(lengths(temp)>3)
+subs <- substr(MA$Season1Date[ind],1,13)
+MA$S[ind] <- mdy(subs)
+subs <- substr(MA$Season1Date[ind],18,33)
+MA$E[ind] <- mdy(subs)
+
+MA[length(MA$FMID)+1,] <- MA[ind,] 
+MA <- MA[-ind,]
+temp <- temp[-c(ind)]
+temp  <- data.frame(matrix(unlist(temp), nrow=length(temp), byrow=T),stringsAsFactors=FALSE)
+temp <- temp[,-2]
+colnames(temp)<-c("Start","End")
+MA$S[1:(length(MA$FMID)-1)] <- temp$Start
+MA$E[1:(length(MA$FMID)-1)] <- temp$End
+
+ind <- which(MA$S==""|MA$E=="")
+MA <- MA[-ind,]
+ind <- which(nchar(MA$S[1:length(MA$FMID)-1])!=10)
+noyear <- which(nchar(MA$S[1:length(MA$FMID)-1])!=10)
+
+MA$S[ind] <- paste(MA$S[ind],"01, 2019")
+MA$E[ind] <- paste(MA$E[ind],"30, 2019")
+MA$Year[ind] <- "Unknown"
+MA$Year[-ind] <- format(as.Date(mdy(MA$S[-ind])),"%Y")
+MA$Year[241] <- format(as_date(as.integer(MA$S[241])),"%Y")
+
+MA$S[1:length(MA$FMID)-1] <- mdy(MA$S[1:length(MA$FMID)-1])
+MA$E[1:length(MA$FMID)-1] <- mdy(MA$E[1:length(MA$FMID)-1])
+ind <- which(is.na(MA$E))
+MA <- MA[-ind,]
+MA$Days <- as.integer(MA$E)-as.integer(MA$S)+1
+```
+
+
+
+# Problem 1-1 : Located
+```{r}
+dense <- data.frame(x=c(MA$x),y=c(MA$y))
+ggplot(dense, aes(x=x, y=y) ) +
+  stat_density_2d(aes(fill = ..level..), geom = "polygon") +
+  theme_classic()+ggtitle("How did farmers market located in MA?") +
+  xlab("East") + ylab("North") +
+  theme(
+    legend.position='none',
+    plot.title = element_text(hjust = 0.5, size=10),
+    axis.title.x = element_text(hjust = 1),
+    axis.title.y = element_text(hjust = 1),
+    axis.text = element_blank()
+  )+
+  scale_fill_distiller(palette="Greens", direction=1)
+```
+
+
+
+# Problem 1-2 : Population vs count
+```{r}
+population <- data.frame("County"=c("Barnstable","Berkshire","Bristol","Dukes","Essex","Franklin","Hampden","Hampshire","Middlesex","Nantucket","Norfolk","Plymouth","Suffolk","Worcester"),"Population"=c(215888, 131219, 548285, 16535, 743159, 71372, 463490, 158080, 1503085, 10172, 670850, 494919, 722023, 798552))
+temp <- plyr::count(MA$County)
+colnames(temp) <- c("County", "Count")
+population <- merge(population,temp,by="County")
+population <- population %>% arrange(desc(Count))
+population$County <- factor(population$County,levels = c(as.character(population$County[1:13])), ordered= TRUE)
+
+ggplot(population, aes(x=Population, y= Count, color= County)) +
+  geom_point(size=2) +
+  scale_color_manual(values = c("#FF6347", "#C63300","#CC6600","#88AA00","#00AA00","#00AA88","#0088A8","#003C9D","#9F88FF","#4400B3","#D28EFF","#770077","#444444")) +
+  theme_classic() +
+  ggtitle("How population effect the number of farmers market?") +
+  theme(plot.title = element_text(hjust = 0.7))
+```
+
+
+# Problem 2 : Count vs year
+```{r}
+dfyear <- plyr::count(MA$Year)
+colnames(dfyear) <- c("Year","Count") 
+#dfyear[which(dfyear$Year==2050),1] <- 0
+barplot(dfyear$Count,names.arg = dfyear$Year, xlab = "Year (Blank : Unknown)",ylab = "Counts", main = "The number of Farmers Market Change Year to Year", col = colorRampPalette(c("lightGreen","limegreen","darkgreen","darkslategray"))(9), border = FALSE)
+```
+
+
+# Problem 3 : (seafood, meat, vegetable, fruit, and whole grain) vs county
+```{r}
+ind <- which(is.na(MA[,30:58]))
+MA <- MA[-ind,]
+j <-1
+for (i in 1: length(MA$FMID)){
+  for(j in 30:58){
+    if (MA[i,j]=="Y"){
+      MA[i,j] <- 1
+    }else{
+      MA[i,j] <- 0 
+    }
+  }
+}
+
+product <- summarise(group_by(MA,County),Seafood=sum(as.integer(Seafood)),Meat=sum(as.integer(Eggs),as.integer(Meat),as.integer(Poultry)),Veggie=sum(as.integer(Vegetables),as.integer(Mushrooms)), Fruit=sum(as.integer(Fruits)),Wholegrains=sum(as.integer(Nuts),as.integer(Beans),as.integer(Grains)))
+
+l <- ""
+for (i in 1: length(product$County)){
+  for(j in 2:length(product)){
+    l <- paste(l,as.character(product[i,j]))
+  }    
+}
+l <- data.frame(strsplit(l," "))
+colnames(l) <- c("count")
+
+data <- data.frame(
+  type=c(rep(c("Seafood","Meat","Veggies","Fruit","WholeGrains"),length(population$County))),
+  county=c( rep(product$County,each=5)) ,
+  sum=l$count[2:length(l$count)]
+)
+population <- population[order(-population$Count),]
+data <- subset(data, data$county==as.character(population$County[1])| data$county==as.character(population$County[2])| data$county==as.character(population$County[3])| data$county==as.character(population$County[4])| data$county==as.character(population$County[5]))
+# Blank
+empty_bar <- 3
+to_add <- data.frame( matrix(NA, empty_bar*5, ncol(data)) )
+colnames(to_add) <- colnames(data)
+to_add$county <- rep(as.character(population$County[1:5]), each=empty_bar)
+data <- rbind(data, to_add)
+data <- data %>% arrange(county)
+data$id <- seq(1, nrow(data))
+# label placement
+label_data <- data
+number_of_bar <- nrow(label_data)
+angle <- 90 - 360 * (label_data$id-0.5) /number_of_bar
+label_data$hjust <- ifelse( angle < -90, 1, 0)
+label_data$angle <- ifelse(angle < -90, angle+180, angle)
+# Base
+base_data <- data %>% 
+  group_by(county) %>% 
+  summarize(start=min(id), end=max(id) - empty_bar) %>% 
+  rowwise() %>% 
+  mutate(title=mean(c(start, end)))
+
+grid_data <- base_data
+grid_data$end <- grid_data$end[ c( nrow(grid_data), 1:nrow(grid_data)-1)] + 1
+grid_data$start <- grid_data$start - 1
+grid_data <- grid_data[-1,]
+data$sum <- as.integer(data$sum)
+label_data$sum <- as.integer(label_data$sum)
+
+ggplot(data, aes(x=as.factor(id), y=sum, fill=county)) +
+  geom_bar(aes(x=as.factor(id), y=sum, fill=county), stat="identity", alpha=0.5) +
+  geom_segment(data=grid_data, aes(x = end, y = 28, xend = start, yend = 28), colour = "grey", alpha=1, size=0.3 , inherit.aes = FALSE ) +
+  geom_segment(data=grid_data, aes(x = end, y = 21, xend = start, yend = 21), colour = "grey", alpha=1, size=0.3 , inherit.aes = FALSE ) +
+  geom_segment(data=grid_data, aes(x = end, y = 14, xend = start, yend = 14), colour = "grey", alpha=1, size=0.3 , inherit.aes = FALSE ) +
+  geom_segment(data=grid_data, aes(x = end, y = 7, xend = start, yend = 7), colour = "grey", alpha=1, size=0.3 , inherit.aes = FALSE ) +
+  annotate("text", x = rep(max(data$id),4), y = c(7, 14, 21, 28), label = c("7", "14", "21", "28") , color="grey", size=3 , angle=0, fontface="bold", hjust=1) +
+  geom_bar(aes(x=as.factor(id), y=sum, fill=county), stat="identity", alpha=0.5) +
+  ylim(-35,50) +
+  theme_minimal() +
+  theme(
+    axis.text = element_blank(),
+    axis.title = element_blank(),
+    panel.grid = element_blank(),
+    plot.margin = unit(rep(-1,4), "cm") 
+  ) +
+  coord_polar() + 
+  geom_text(data=label_data, aes(x=id, y=sum+5, label=type, hjust=hjust), color="black", fontface="bold",alpha=0.8, size=3, angle= label_data$angle, inherit.aes = FALSE ) +
+  geom_segment(data=base_data, aes(x = start, y = -2, xend = end, yend = -2), colour = "darkgray", alpha=0.8, size=0.6 , inherit.aes = FALSE )+
+  labs(title="Compare counts of seafood, meat, vegetable, fruit, and whole grain products in top 5 county")
+```
+
+
+# Problem 4 : Payment %
+```{r}
+ind <- which(is.na(MA[24:28]))
+if (length(ind) != 0)
+{
+  MA <- MA[-ind,]
+}
+pay <- data.frame("Type"=names(MA[24:28]))
+pay$Count[1] <- plyr::count(MA$Credit)[2,2]
+pay$Count[2] <- plyr::count(MA$WIC)[2,2]
+pay$Count[3] <- plyr::count(MA$WICcash)[2,2]
+pay$Count[4] <- plyr::count(MA$SFMNP)[2,2]
+pay$Count[5] <- plyr::count(MA$SNAP)[2,2]
+paycount <- pay
+pay <- pay[order(-pay$Count),]
+lab.ypos <- cumsum(pay$Count) - 0.5*pay$Count
+pay$Type <- factor(pay$Type, levels = rev(as.character(pay$Type)))
+pay <- pay %>%
+  group_by(Type) %>%
+  summarise(Count = sum(Count)) %>%
+  mutate(share=Count/sum(Count)*100.0)%>%
+  arrange(desc(Count))
+
+ggplot(pay, aes(x = "", y = Count, fill = Type)) +
+  geom_bar(width = 1, stat = "identity", color = "white")+
+  coord_polar("y", start = 0)+
+  geom_text(aes(y=lab.ypos,label = paste0(round(share), "%")), color = "white")+
+  guides(fill = guide_legend(reverse = TRUE))+
+  scale_fill_manual(values = brewer.pal(5, "Set2")) +theme_void()+ ggtitle("Percentage of Payment Method")+theme(plot.title = element_text(hjust = 0.7))
+```
+
+
+
+# Problem 5-1 :year vs county
+```{r}
+temp <- subset(MA, MA$County==as.character(population$County[1])| MA$County==as.character(population$County[2])| MA$County==as.character(population$County[3])| MA$County==as.character(population$County[4])| MA$County==as.character(population$County[5]))
+
+a <-plyr::count(MA$Year)
+yeareach <- data.frame(county=c(as.character(population$County[1:5])))
+df <- data.frame( matrix(0, 5, length(a$x)))
+colnames(df) <- as.character(a[,1])
+yeareach <- cbind(yeareach,df)
+
+for(i in 1:5){
+  try <- subset(temp, temp$County==as.character(population$County[i]))
+  a <-plyr::count(try$Year)
+  if (i==1){
+    freq <- a
+  }else{
+    freq <- merge(freq,a,by="x",all = T)
+  }
+}
+colnames(freq) <- c("Year", as.character(population$County[1:5]))
+
+for (i in 1: length(freq$Year)){
+  for(j in 1:length(freq)){
+    if (is.na(freq[i,j])){
+      freq[i,j] <- 0
+    }
+  }
+}
+
+year <- c(rep(as.character(freq$Year),5))
+Countyeach <- c(rep(as.character(population$County[1:5]),each=length(freq$Year)))
+sumeach <- c(as.character(freq[,2]),as.character(freq[,3]),as.character(freq[,4]),as.character(freq[,5]),as.character(freq[,6]))
+
+freq <- data.frame(Year=year, County= Countyeach, Sum= sumeach)
+freq$Sum <- as.integer(as.character(freq$Sum))
+ind <- which(freq$Year=="Unknown")
+freq <- freq[-ind,]
+freq$Year <- as.integer(as.character(freq$Year))
+freq$County <- factor(freq$County,levels = c(as.character(population$County[1:5])),ordered = TRUE)
+
+ggplot(data = freq, aes(x = Year, y = Sum, colour = County)) + geom_line()+scale_color_brewer(palette="Dark2") + theme_classic() + ylab("Count")+scale_x_continuous(breaks = freq$Year) +theme(legend.position = "top")
+```
+# Problem 5-2 : year vs payment method
+```{r}
+for(i in 1:length(dfyear$Year)){
+  try <- subset(MA, MA$Year==as.character(dfyear$Year[i]))
+  for (j in 24:28){
+      a <-plyr::count(try[j])
+      colnames(a) <- c("Type","Freq")
+      ind <- which(a$Type=="Y")
+      if (length(ind)==0){
+        a <- data.frame("Year"=c(as.character(dfyear$Year[i])),"Type"=c(as.character(paycount$Type[j-23])), "Count"=c(0))
+      }else{
+              a <- data.frame("Year"=c(as.character(dfyear$Year[i])),"Type"=c(as.character(paycount$Type[j-23])), "Count"=c(a[ind,2]))
+      }
+      if (j==24){
+        freq2 <- a
+      }else{
+      freq2 <- rbind(freq2,a)
+    }
+  }
+  if (i==1){
+    yearpay <- freq2
+  }else{
+    yearpay <- rbind(yearpay,freq2)
+  }
+}
+
+ind <- which(yearpay$Year=="Unknown")
+yearpay <- yearpay[-ind,]
+
+j <- 1
+for (i in 1:(length(dfyear$Year)-1)){
+      yearpay$Count[j:(j+4)] <- as.double(yearpay$Count[j:(j+4)]/dfyear$Count[i])
+      j <- j+5
+}
+yearpay$Count <- as.double(yearpay$Count)
+yearpay$Type <- factor(yearpay$Type,levels = rev(c(as.character(pay$Type[1:5]))))
+
+ggplot(yearpay, aes(fill=Type, y=Count, x= Year)) + 
+    geom_bar(position="dodge", stat="identity") + scale_fill_brewer(palette = 'Set2',guide = guide_legend(reverse=TRUE)) +theme_grey() + 
+  theme(plot.title = element_text(hjust = 0.5, size = 10)) +
+    ggtitle("How the payment method differ from year to year?")+ylab("")
+```
+# Problem 5-3 : Seafood vs Sea
+```{r}
+MA$Sea <- 0
+ind <- which(MA$County=="Barnstable" | MA$County=="Bristol" | MA$County=="Dukes" | MA$County=="Essex" | MA$County=="Nantucket" | MA$County=="Plymouth" | MA$County=="Suffolk" | MA$County=="Norfolk")
+MA$Sea[ind] <- "Y"
+MA$Sea[-ind] <- "N"
+newsea <- select(MA, Seafood, Sea)
+
+sea <- subset(newsea, newsea$Sea=="Y")
+notsea <- subset(newsea, newsea$Sea=="N")
+
+specie <- c(rep("Coastal" , 2) , rep("Inland" , 2))
+sea <- plyr::count(sea$Seafood)
+sea$per <- paste0(as.character(round((sea$freq/sum(sea$freq))*100)),"%")
+notsea <- plyr::count(notsea$Seafood)
+notsea$per <- paste0(as.character(round((notsea$freq/sum(notsea$freq))*100)),"%")
+data <- rbind(sea,notsea)
+data <- cbind(specie,data)
+data$x <- c(rep(c("No sold seafood","Sold seafood"), 2))
+
+ggplot(data, aes(fill=x, y=freq, x=specie)) + 
+    geom_bar(position="stack", stat="identity", width = 0.5) +
+    geom_text(aes(label=per), color="white", size=3.5, vjust = 1.5, hjust = 0.5, position = position_stack()) +
+    scale_fill_manual(values = brewer.pal(3, "Set2")) + 
+    ylim(0,150) +
+    xlab("")+ylab("Count") +
+    theme_minimal()
+```
