@@ -1,6 +1,8 @@
 # Exploratory Data Analysis of Farmer's Market in the US
 ## Dataset 
 We are using a dataset that contains location, time, latitude, longitude, products, and payment mode collected a couples of years. (https://www.ams.usda.gov/local-food-directories/farmersmarkets) 
+## Tableau Dashboard
+Here is tableau dashboard posted on [Tableau Public](https://public.tableau.com/views/FarmersMarket_15906325980390/FarmersMarket)
 ## Objective 
 To create insights to know about farmer’s market which located in the United States.  
 ## Client 
