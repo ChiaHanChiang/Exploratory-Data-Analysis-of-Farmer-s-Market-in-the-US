@@ -3,6 +3,7 @@
 We are using a dataset that contains location, time, latitude, longitude, products, and payment mode collected a couples of years. (https://www.ams.usda.gov/local-food-directories/farmersmarkets) 
 ## Tableau Dashboard
 Here is tableau dashboard posted on [Tableau Public](https://public.tableau.com/views/FarmersMarket_15906325980390/FarmersMarket)
+
 There are two graphs that shows:
 1. A heat map with payment method on x-axis and product type on y-axis. The colors represent the number of farmers market in a chosen year.
 2. Give the users the choice to select year, product type and payment method. The color in the map represents the number of farmers market by state.
