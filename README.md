@@ -1,4 +1,4 @@
-# Exploratory-Data-Analysis-of-Farmer-s-Market-in-the-US
+# Exploratory Data Analysis of Farmer's Market in the US
 ## Dataset 
 We are using a dataset that contains location, time, latitude, longitude, products, and payment mode collected a couples of years. (https://www.ams.usda.gov/local-food-directories/farmersmarkets) 
 ## Objective 
