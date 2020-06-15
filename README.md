@@ -20,14 +20,12 @@ Flexible
 ## Variables
 The original dataset has 8778 registered farmer’s market with 59 variables. Here is some important variables that used in these insights.
 
-**Market Names:** Name of each farmer’s market
-
-**County:** Which county did these farmer’s markets hold in (e.g. Barton, Middlesex, New York, etc.)
-
-**State:** Which state did these farmer’s markets hold in (e.g. Massachusetts, New York, Ohio, etc.)
-
-**Season1 Date:** When did these farmer’s markets hold
-
-**Products:** 29 product types, use “Y” and “N” to represent if this market has this type of vendors (e.g. Meats, Fruit, etc.)
-
-**Payment mode:** 5 kind of payment method (Credit, WIC, WICcash, SFMNP, SNAP)
+| Feature Name | Definition  | 
+| ------- | ------------------ |
+| **Market Names**| Name of each farmer’s market |
+| **County** |  Which county did these farmer’s markets hold in (e.g. Barton, Middlesex, New York, etc.) |
+| **State** | Which state did these farmer’s markets hold in (e.g. Massachusetts, New York, Ohio, etc.) |
+| **Season1 Date** | When did these farmer’s markets hold |
+| **Products** |29 product types, use “Y” and “N” to represent if this market has this type of vendors (e.g. Meats, Fruit, etc.) |
+| **Payment mode**| 5 kind of payment method (Credit, WIC, WICcash, SFMNP, SNAP) |
+</br>
